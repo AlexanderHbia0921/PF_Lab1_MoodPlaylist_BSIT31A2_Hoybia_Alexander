@@ -1,157 +1,346 @@
-@model MoodPlaylistGenerator.ViewModels.DashboardViewModel
+@model MoodPlaylistGenerator.Services.Models.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12">
-            <h1 class="display-4">Welcome back, @User.Identity!.Name!</h1>
-            <p class="lead">Your Mood Playlist Generator Dashboard</p>
-        </div>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-white bg-primary">
-                <div class="card-header">Total Songs</div>
-                <div class="card-body">
-                    <h4 class="card-title">@Model.TotalSongs</h4>
-                    <p class="card-text">Songs in your library</p>
+<!-- Dashboard Header -->
+<div class="dashboard-container animate-fade-in-up">
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-5 fw-bold mb-2">
+                    Welcome back, @Model.UserName! 👋
+                </h1>
+                <p class="lead text-muted mb-4">
+                    Here's what's happening with your music today
+                </p>
+                <div class="quick-actions d-flex flex-wrap">
+                    <a href="/Song/Create" class="btn btn-primary me-2 mb-2">
+                        <i class="fas fa-plus me-2"></i>Add Song
+                    </a>
+                    <a href="/Playlist/Create" class="btn btn-success me-2 mb-2">
+                        <i class="fas fa-magic me-2"></i>Create Playlist
+                    </a>
+                    <a href="/Song" class="btn btn-outline-primary me-2 mb-2">
+                        <i class="fas fa-compact-disc me-2"></i>My Songs
+                    </a>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-success">
-                <div class="card-header">Total Playlists</div>
-                <div class="card-body">
-                    <h4 class="card-title">@Model.TotalPlaylists</h4>
-                    <p class="card-text">Generated playlists</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-info">
-                <div class="card-header">Moods Available</div>
-                <div class="card-body">
-                    <h4 class="card-title">@Model.Moods.Count</h4>
-                    <p class="card-text">Mood categories</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-warning">
-                <div class="card-header">Quick Actions</div>
-                <div class="card-body">
-                    <a href="/Songs/Create" class="btn btn-light btn-sm">Add Song</a>
-                    <a href="/Playlists/Generate" class="btn btn-light btn-sm">Generate</a>
+            <div class="col-lg-4 text-lg-end">
+                <div class="avatar-large bg-gradient d-inline-flex">
+                    <i class="fas fa-user fa-3x"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Mood Overview -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Your Moods</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        @foreach (var mood in Model.Moods)
+    <!-- Stats Section -->
+    <div class="row g-4 mb-5 animate-fade-in-up animate-delay-1">
+        <div class="col-lg-3 col-md-6">
+            <div class="card stat-card h-100 hover-lift">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary mb-3">
+                        <i class="fas fa-compact-disc"></i>
+                    </div>
+                    <h2 class="counter fw-bold mb-1" data-target="@Model.Stats.TotalSongs">0</h2>
+                    <p class="text-muted mb-0">Total Songs</p>
+                    <small class="stat-trend @(Model.Stats.SongsThisWeek > 0 ? "text-success" : "text-muted")">
+                        @if (Model.Stats.SongsThisWeek > 0)
                         {
-                            var songCount = Model.MoodSongCounts.ContainsKey(mood.Id) ? Model.MoodSongCounts[mood.Id] : 0;
-                            <div class="col-md-2 text-center mb-3">
-                                <div class="card" style="border-color: @mood.Color;">
-                                    <div class="card-body">
-                                        <h6 class="card-title" style="color: @mood.Color;">@mood.Name</h6>
-                                        <p class="card-text">
-                                            <strong>@songCount</strong> songs
-                                        </p>
-                                        <small class="text-muted">@mood.Description</small>
+                            @Html.Raw($"<i class='fas fa-arrow-up me-1'></i>+{Model.Stats.SongsThisWeek} this week")
+                        }
+                        else
+                        {
+                            <i class="fas fa-minus me-1"></i>@:No new songs this week
+                        }
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="card stat-card h-100 hover-lift">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success mb-3">
+                        <i class="fas fa-list-music"></i>
+                    </div>
+                    <h2 class="counter fw-bold mb-1" data-target="@Model.Stats.TotalPlaylists">0</h2>
+                    <p class="text-muted mb-0">Playlists</p>
+                    <small class="stat-trend @(Model.Stats.PlaylistsThisWeek > 0 ? "text-success" : "text-muted")">
+                        @if (Model.Stats.PlaylistsThisWeek > 0)
+                        {
+                            @Html.Raw($"<i class='fas fa-arrow-up me-1'></i>+{Model.Stats.PlaylistsThisWeek} this week")
+                        }
+                        else
+                        {
+                            <i class="fas fa-minus me-1"></i>@:No new playlists this week
+                        }
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="card stat-card h-100 hover-lift">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-warning bg-opacity-10 text-warning mb-3">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h2 class="counter fw-bold mb-1" data-target="@Model.Stats.FavoriteMoods">0</h2>
+                    <p class="text-muted mb-0">Unique Moods</p>
+                    <small class="stat-trend text-info">
+                        <i class="fas fa-heart me-1"></i>@(Model.Stats.MostUsedMood != "None" ? Model.Stats.MostUsedMood : "No favorites yet")
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="card stat-card h-100 hover-lift">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info mb-3">
+                        <i class="fas fa-calendar-week"></i>
+                    </div>
+                    <h2 class="counter fw-bold mb-1" data-target="@Model.Stats.DaysActive">0</h2>
+                    <p class="text-muted mb-0">Days Active</p>
+                    <small class="stat-trend text-success">
+                        <i class="fas fa-calendar me-1"></i>Since @Model.LastLogin.ToString("MMM dd, yyyy")
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Mood Selection -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="section-header mb-4 animate-fade-in-left animate-delay-2">
+                <h3 class="fw-semibold">How are you feeling today?</h3>
+                <p class="text-muted">Select a mood to get personalized playlist recommendations</p>
+            </div>
+            
+            <div class="row g-3 mood-grid">
+                @if (Model.MoodAnalytics.Any())
+                {
+                    @foreach (var mood in Model.MoodAnalytics.Take(6))
+                    {
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <div class="card mood-card h-100 text-center hover-lift" data-mood-id="@mood.MoodId">
+                                <div class="card-body p-3">
+                                    <div class="mood-icon bg-@mood.ColorClass bg-opacity-20 text-@mood.ColorClass mb-2">
+                                        @mood.Emoji
+                                    </div>
+                                    <h6 class="fw-semibold mb-1">@mood.MoodName</h6>
+                                    <small class="text-muted">@mood.SongCount songs</small>
+                                    <div class="mood-overlay">
+                                        <div class="mood-actions">
+                                            <a href="/Song?filterByMood=@mood.MoodId" class="btn btn-light btn-sm">
+                                                <i class="fas fa-play"></i>
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="col-12 text-center">
+                        <p class="text-muted mb-4">No moods used yet. Start adding songs to see your mood analytics!</p>
+                        <a href="/Song/Create" class="btn btn-primary">Add Your First Song</a>
                     </div>
-                </div>
+                }
             </div>
         </div>
     </div>
 
-    <!-- Recent Content -->
+    <!-- Recent Activity -->
     <div class="row">
-        <!-- Recent Songs -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Recent Songs</h5>
-                    <a href="/Songs" class="btn btn-sm btn-outline-primary">View All</a>
+        <div class="col-lg-6">
+            <div class="card content-card animate-fade-in-left animate-delay-3">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="fw-semibold mb-0">Recent Songs</h5>
+                        <a href="/Song" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body pt-3">
                     @if (Model.RecentSongs.Any())
                     {
-                        <div class="list-group list-group-flush">
-                            @foreach (var song in Model.RecentSongs.Take(5))
+                        <div class="song-list">
+                            @foreach (var song in Model.RecentSongs)
                             {
-                                <div class="list-group-item">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h6 class="mb-1">@song.Title</h6>
-                                        <small>@song.CreatedAt.ToString("MMM dd")</small>
+                                <div class="song-item d-flex align-items-center p-3 hover-bg-light">
+                                    <div class="song-artwork bg-primary text-white me-3">
+                                        <i class="fas fa-music"></i>
                                     </div>
-                                    <p class="mb-1">by @song.Artist</p>
-                                    <small>
-                                        @foreach (var sm in song.SongMoods)
+                                    <div class="song-meta flex-grow-1">
+                                        <h6 class="song-title">@song.Title</h6>
+                                        <p class="song-artist text-muted">@song.Artist @(!string.IsNullOrEmpty(song.Album) ? $"· {song.Album}" : "")</p>
+                                        @if (song.SongMoods.Any())
                                         {
-                                            <span class="badge rounded-pill" style="background-color: @sm.Mood.Color;">@sm.Mood.Name</span>
+                                            <small class="text-info">
+                                                @string.Join(", ", song.SongMoods.Select(sm => sm.Mood.Name))
+                                            </small>
                                         }
-                                    </small>
+                                    </div>
+                                    <div class="song-actions">
+                                        <a href="/Song/Details/@song.Id" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
                                 </div>
                             }
                         </div>
                     }
                     else
                     {
-                        <p class="text-muted">No songs yet. <a href="/Songs/Create">Add your first song!</a></p>
+                        <div class="text-center mt-3">
+                            <i class="fas fa-compact-disc empty-icon fa-3x mb-3 text-muted"></i>
+                            <p class="text-muted">No songs added yet</p>
+                            <a href="/Song/Create" class="btn btn-primary">Add Your First Song</a>
+                        </div>
                     }
                 </div>
             </div>
         </div>
-
-        <!-- Recent Playlists -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Recent Playlists</h5>
-                    <a href="/Playlists" class="btn btn-sm btn-outline-success">View All</a>
+        
+        <div class="col-lg-6">
+            <div class="card content-card animate-fade-in-right animate-delay-3">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="fw-semibold mb-0">Recent Playlists</h5>
+                        <a href="/Playlist" class="btn btn-sm btn-outline-success">View All</a>
+                    </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body pt-3">
                     @if (Model.RecentPlaylists.Any())
                     {
-                        <div class="list-group list-group-flush">
-                            @foreach (var playlist in Model.RecentPlaylists.Take(5))
+                        <div class="playlist-list">
+                            @foreach (var playlist in Model.RecentPlaylists)
                             {
-                                <div class="list-group-item">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h6 class="mb-1">@playlist.Name</h6>
-                                        <small>@playlist.GeneratedAt.ToString("MMM dd")</small>
+                                <div class="playlist-item d-flex align-items-center p-3 hover-bg-light">
+                                    <div class="playlist-artwork bg-success text-white me-3">
+                                        <i class="fas fa-list-music"></i>
                                     </div>
-                                    <p class="mb-1">
-                                        <span class="badge rounded-pill" style="background-color: @playlist.Mood.Color;">@playlist.Mood.Name</span>
-                                        @playlist.PlaylistSongs.Count songs
-                                    </p>
+                                    <div class="playlist-meta flex-grow-1">
+                                        <h6 class="playlist-title">@playlist.Name</h6>
+                                        <p class="playlist-mood text-muted">
+                                            @((playlist.Mood?.Name?.ToLower() ?? "unknown") switch
+                                            {
+                                                "happy" => "😊",
+                                                "sad" => "😢",
+                                                "energetic" => "⚡",
+                                                "calm" => "😌",
+                                                "romantic" => "💝",
+                                                "motivational" => "🔥",
+                                                _ => "🎵"
+                                            })
+                                            @(playlist.Mood?.Name ?? "Unknown") · @(playlist.PlaylistSongs?.Count ?? 0) songs
+                                        </p>
+                                        @if (!string.IsNullOrEmpty(playlist.Description))
+                                        {
+                                            <small class="text-muted">@playlist.Description</small>
+                                        }
+                                    </div>
+                                    <div class="playlist-actions">
+                                        <a href="/Playlist/Details/@playlist.Id" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
                                 </div>
                             }
                         </div>
                     }
                     else
                     {
-                        <p class="text-muted">No playlists yet. <a href="/Playlists/Generate">Generate your first playlist!</a></p>
+                        <div class="text-center mt-3">
+                            <i class="fas fa-list-music empty-icon fa-3x mb-3 text-muted"></i>
+                            <p class="text-muted">No playlists created yet</p>
+                            <a href="/Playlist/Create" class="btn btn-success">Create Your First Playlist</a>
+                        </div>
                     }
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Counter animation for dashboard stats
+            const counters = document.querySelectorAll('.counter');
+            let animationStarted = false;
+            
+            const animateCounter = (counter) => {
+                const target = parseInt(counter.getAttribute('data-target')) || 0;
+                const duration = 2000; // 2 seconds
+                const startTime = performance.now();
+                const startValue = 0;
+                
+                const updateCounter = (currentTime) => {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Easing function for smooth animation
+                    const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+                    const currentValue = Math.floor(startValue + (target * easeOutQuart));
+                    
+                    counter.innerText = currentValue;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(updateCounter);
+                    } else {
+                        counter.innerText = target;
+                    }
+                };
+                
+                requestAnimationFrame(updateCounter);
+            };
+            
+            const startCounterAnimation = () => {
+                if (!animationStarted) {
+                    animationStarted = true;
+                    counters.forEach(counter => {
+                        animateCounter(counter);
+                    });
+                }
+            };
+            
+            // Start counter animation after a short delay
+            setTimeout(startCounterAnimation, 500);
+            
+            // Enhanced mood card interactions
+            const moodCards = document.querySelectorAll('.mood-card');
+            moodCards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on the play button
+                    if (e.target.closest('a')) return;
+                    
+                    const moodType = this.querySelector('h6').textContent;
+                    const moodId = this.getAttribute('data-mood-id');
+                    
+                    // Redirect to songs filtered by this mood
+                    if (moodId) {
+                        window.location.href = `/Song?filterByMood=${moodId}`;
+                    }
+                });
+            });
+            
+            // Add hover effects to cards
+            const cards = document.querySelectorAll('.hover-lift');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px)';
+                    this.style.transition = 'transform 0.3s ease';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+        });
+    </script>
+}

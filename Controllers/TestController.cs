@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using MoodPlaylistGenerator.Services;
+using MoodPlaylistGenerator.Services.Implementations;
+using MoodPlaylistGenerator.Services.Interfaces;
 using MoodPlaylistGenerator.Data;
 
 namespace MoodPlaylistGenerator.Controllers
@@ -9,20 +10,23 @@ namespace MoodPlaylistGenerator.Controllers
     public class TestController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly AuthService _authService;
+        private readonly IAuthService _authService;
         private readonly SongService _songService;
         private readonly PlaylistService _playlistService;
+        private readonly MoodService _moodService;
 
         public TestController(
             ApplicationDbContext context,
-            AuthService authService,
+            IAuthService authService,
             SongService songService,
-            PlaylistService playlistService)
+            PlaylistService playlistService,
+            MoodService moodService)
         {
             _context = context;
             _authService = authService;
             _songService = songService;
             _playlistService = playlistService;
+            _moodService = moodService;
         }
 
         [HttpGet("status")]
@@ -40,7 +44,7 @@ namespace MoodPlaylistGenerator.Controllers
         {
             try
             {
-                var moods = await _songService.GetAllMoodsAsync();
+                var moods = await _moodService.GetAllMoodsAsync();
                 return Ok(moods);
             }
             catch (Exception ex)
@@ -92,6 +96,8 @@ namespace MoodPlaylistGenerator.Controllers
                 var song = await _songService.CreateSongAsync(
                     "Test Song",
                     "Test Artist", 
+                    null, // album
+                    null, // year
                     "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
                     user.Id,
                     new List<int> { 1, 3 } // Happy and Relaxed moods
@@ -138,11 +144,11 @@ namespace MoodPlaylistGenerator.Controllers
                     mood = playlist.Mood.Name,
                     songCount = playlist.PlaylistSongs.Count,
                     songs = playlist.PlaylistSongs
-                        .OrderBy(ps => ps.Position)
+                        .OrderBy(ps => ps.Order)
                         .Select(ps => new { 
                             title = ps.Song.Title,
                             artist = ps.Song.Artist,
-                            position = ps.Position
+                            position = ps.Order
                         })
                         .ToList()
                 });

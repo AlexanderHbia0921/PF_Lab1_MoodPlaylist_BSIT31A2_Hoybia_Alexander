@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-using MoodPlaylistGenerator.Services;
+using MoodPlaylistGenerator.Services.Implementations;
 using MoodPlaylistGenerator.ViewModels;
 
 namespace MoodPlaylistGenerator.Controllers
@@ -11,23 +11,30 @@ namespace MoodPlaylistGenerator.Controllers
     {
         private readonly PlaylistService _playlistService;
         private readonly SongService _songService;
+        private readonly MoodService _moodService;
 
-        public PlaylistsController(PlaylistService playlistService, SongService songService)
+        public PlaylistsController(PlaylistService playlistService, SongService songService, MoodService moodService)
         {
             _playlistService = playlistService;
             _songService = songService;
+            _moodService = moodService;
         }
 
         private int GetCurrentUserId()
         {
-            return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("User is not properly authenticated.");
+            }
+            return userId;
         }
 
         public async Task<IActionResult> Index(int? moodId)
         {
             var userId = GetCurrentUserId();
             var playlists = await _playlistService.GetUserPlaylistsAsync(userId);
-            var moods = await _songService.GetAllMoodsAsync();
+            var moods = await _moodService.GetAllMoodsAsync();
 
             // Filter by mood if selected
             if (moodId.HasValue)
@@ -56,7 +63,7 @@ namespace MoodPlaylistGenerator.Controllers
             var viewModel = new PlaylistDetailViewModel
             {
                 Playlist = playlist,
-                Songs = playlist.PlaylistSongs.OrderBy(ps => ps.Position).ToList(),
+                Songs = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList(),
                 CanEdit = true
             };
 
@@ -67,7 +74,7 @@ namespace MoodPlaylistGenerator.Controllers
         public async Task<IActionResult> Generate()
         {
             var userId = GetCurrentUserId();
-            var moods = await _songService.GetAllMoodsAsync();
+            var moods = await _moodService.GetAllMoodsAsync();
             var songCounts = await _playlistService.GetMoodSongCountsAsync(userId);
 
             var viewModel = new GeneratePlaylistViewModel
@@ -85,7 +92,7 @@ namespace MoodPlaylistGenerator.Controllers
             if (!ModelState.IsValid)
             {
                 var userId = GetCurrentUserId();
-                model.AvailableMoods = await _songService.GetAllMoodsAsync();
+                model.AvailableMoods = await _moodService.GetAllMoodsAsync();
                 model.MoodSongCounts = await _playlistService.GetMoodSongCountsAsync(userId);
                 return View(model);
             }
@@ -106,7 +113,7 @@ namespace MoodPlaylistGenerator.Controllers
             {
                 ModelState.AddModelError("", ex.Message);
                 var userId = GetCurrentUserId();
-                model.AvailableMoods = await _songService.GetAllMoodsAsync();
+                model.AvailableMoods = await _moodService.GetAllMoodsAsync();
                 model.MoodSongCounts = await _playlistService.GetMoodSongCountsAsync(userId);
                 return View(model);
             }
@@ -114,7 +121,7 @@ namespace MoodPlaylistGenerator.Controllers
             {
                 ModelState.AddModelError("", "An error occurred while generating the playlist.");
                 var userId = GetCurrentUserId();
-                model.AvailableMoods = await _songService.GetAllMoodsAsync();
+                model.AvailableMoods = await _moodService.GetAllMoodsAsync();
                 model.MoodSongCounts = await _playlistService.GetMoodSongCountsAsync(userId);
                 return View(model);
             }

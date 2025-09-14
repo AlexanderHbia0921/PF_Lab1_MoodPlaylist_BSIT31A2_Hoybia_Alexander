@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-using MoodPlaylistGenerator.Services;
+using MoodPlaylistGenerator.Services.Implementations;
 using MoodPlaylistGenerator.ViewModels;
 
 namespace MoodPlaylistGenerator.Controllers
@@ -10,27 +10,34 @@ namespace MoodPlaylistGenerator.Controllers
     public class SongsController : Controller
     {
         private readonly SongService _songService;
+        private readonly MoodService _moodService;
 
-        public SongsController(SongService songService)
+        public SongsController(SongService songService, MoodService moodService)
         {
             _songService = songService;
+            _moodService = moodService;
         }
 
         private int GetCurrentUserId()
         {
-            return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("User is not properly authenticated.");
+            }
+            return userId;
         }
 
         public async Task<IActionResult> Index(int? moodId, string? search)
         {
             var userId = GetCurrentUserId();
             var songs = await _songService.GetUserSongsAsync(userId);
-            var moods = await _songService.GetAllMoodsAsync();
+            var moods = await _moodService.GetAllMoodsAsync();
 
             // Filter by mood if selected
             if (moodId.HasValue)
             {
-                songs = await _songService.GetSongsByMoodAsync(moodId.Value, userId);
+                songs = await _songService.GetSongsByMoodAsync(userId, moodId.Value);
             }
 
             // Filter by search term
@@ -64,7 +71,7 @@ namespace MoodPlaylistGenerator.Controllers
             var viewModel = new SongDetailViewModel
             {
                 Song = song,
-                YouTubeVideoId = _songService.ExtractYouTubeVideoId(song.YouTubeUrl),
+                YouTubeVideoId = await _songService.ExtractVideoIdFromUrl(song.YouTubeUrl ?? ""),
                 AssignedMoods = song.SongMoods.Select(sm => sm.Mood).ToList()
             };
 
@@ -76,7 +83,7 @@ namespace MoodPlaylistGenerator.Controllers
         {
             var viewModel = new CreateSongViewModel
             {
-                AvailableMoods = await _songService.GetAllMoodsAsync()
+                AvailableMoods = await _moodService.GetAllMoodsAsync()
             };
 
             return View(viewModel);
@@ -87,7 +94,7 @@ namespace MoodPlaylistGenerator.Controllers
         {
             if (!ModelState.IsValid)
             {
-                model.AvailableMoods = await _songService.GetAllMoodsAsync();
+                model.AvailableMoods = await _moodService.GetAllMoodsAsync();
                 return View(model);
             }
 
@@ -98,17 +105,19 @@ namespace MoodPlaylistGenerator.Controllers
                 await _songService.CreateSongAsync(
                     model.Title, 
                     model.Artist, 
+                    null, // album
+                    null, // year
                     model.YouTubeUrl, 
                     userId, 
                     model.SelectedMoodIds);
 
                 TempData["SuccessMessage"] = "Song added successfully!";
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("Dashboard", "Home");
             }
             catch (Exception)
             {
                 ModelState.AddModelError("", "An error occurred while adding the song.");
-                model.AvailableMoods = await _songService.GetAllMoodsAsync();
+                model.AvailableMoods = await _moodService.GetAllMoodsAsync();
                 return View(model);
             }
         }
@@ -129,7 +138,7 @@ namespace MoodPlaylistGenerator.Controllers
                 Artist = song.Artist,
                 YouTubeUrl = song.YouTubeUrl,
                 SelectedMoodIds = song.SongMoods.Select(sm => sm.MoodId).ToList(),
-                AvailableMoods = await _songService.GetAllMoodsAsync()
+                AvailableMoods = await _moodService.GetAllMoodsAsync()
             };
 
             return View(viewModel);
@@ -140,7 +149,7 @@ namespace MoodPlaylistGenerator.Controllers
         {
             if (!ModelState.IsValid)
             {
-                model.AvailableMoods = await _songService.GetAllMoodsAsync();
+                model.AvailableMoods = await _moodService.GetAllMoodsAsync();
                 return View(model);
             }
 
@@ -148,15 +157,17 @@ namespace MoodPlaylistGenerator.Controllers
             
             try
             {
-                var updatedSong = await _songService.UpdateSongAsync(
+                var success = await _songService.UpdateSongAsync(
                     model.Id, 
                     userId, 
                     model.Title, 
                     model.Artist, 
+                    null, // album
+                    null, // year
                     model.YouTubeUrl, 
                     model.SelectedMoodIds);
 
-                if (updatedSong == null)
+                if (!success)
                     return NotFound();
 
                 TempData["SuccessMessage"] = "Song updated successfully!";
@@ -165,7 +176,7 @@ namespace MoodPlaylistGenerator.Controllers
             catch (Exception)
             {
                 ModelState.AddModelError("", "An error occurred while updating the song.");
-                model.AvailableMoods = await _songService.GetAllMoodsAsync();
+                model.AvailableMoods = await _moodService.GetAllMoodsAsync();
                 return View(model);
             }
         }

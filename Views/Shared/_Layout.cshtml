@@ -1,104 +1,337 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - MoodPlaylistGenerator</title>
     <script type="importmap"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/MoodPlaylistGenerator.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+          integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    
+    <!-- Immediate theme detection to prevent flash -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
 </head>
 <body>
+    <!-- Music Sidebar (Spotify-like) -->
+    @if (User.Identity!.IsAuthenticated)
+    {
+        <div class="music-sidebar" id="musicSidebar">
+            <div class="sidebar-header">
+                <a href="/" class="sidebar-logo">
+                    <i class="fas fa-music"></i>
+                    <span>MoodplaylistGenerator</span>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <!-- Primary Navigation -->
+                <div class="sidebar-section">
+                    <a href="/" class="sidebar-nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">
+                        <i class="sidebar-nav-icon fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="/Song" class="sidebar-nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Song" ? "active" : "")">
+                        <i class="sidebar-nav-icon fas fa-compact-disc"></i>
+                        <span>Songs</span>
+                    </a>
+                    <a href="/Playlist" class="sidebar-nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Playlist" ? "active" : "")">
+                        <i class="sidebar-nav-icon fas fa-list-music"></i>
+                        <span>Playlists</span>
+                    </a>
+                </div>
+                
+                <hr class="my-3 mx-4" style="border-color: var(--music-border);">
+                
+                <!-- Secondary Navigation -->
+                <div class="sidebar-section">
+                    <a href="/Home/Dashboard" class="sidebar-nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Dashboard" ? "active" : "")">
+                        <i class="sidebar-nav-icon fas fa-chart-line"></i>
+                        <span>Your Library</span>
+                    </a>
+                    <a href="/Playlist/Create" class="sidebar-nav-item">
+                        <i class="sidebar-nav-icon fas fa-plus"></i>
+                        <span>Create Playlist</span>
+                    </a>
+                    <a href="/Playlists/Generate" class="sidebar-nav-item">
+                        <i class="sidebar-nav-icon fas fa-magic"></i>
+                        <span>Generate</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    }
+    
+    <!-- Top Header -->
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-lg fixed-top" id="mainNavbar" style="background: var(--music-bg-primary); border-bottom: 1px solid var(--music-border); padding: 12px 0;">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">MoodPlaylistGenerator</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        @if (User.Identity!.IsAuthenticated)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Songs" asp-action="Index">My Songs</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Playlists" asp-action="Index">My Playlists</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Playlists" asp-action="Generate">Generate Playlist</a>
-                            </li>
-                        }
-                    </ul>
-                    <ul class="navbar-nav">
-                        @if (User.Identity!.IsAuthenticated)
-                        {
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-dark" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                    @User.Identity.Name
-                                </a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#">Profile</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" asp-controller="Account" asp-action="Logout">Logout</a></li>
-                                </ul>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Register</a>
-                            </li>
-                        }
-                    </ul>
+                @if (User.Identity!.IsAuthenticated)
+                {
+                    <!-- Mobile/Tablet Sidebar Toggle -->
+                    <button class="btn d-lg-none me-3" id="sidebarToggleMobile" style="background: none; border: none; color: var(--music-text-primary); font-size: 1.25rem;">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <!-- Desktop Navigation Arrows -->
+                    <div class="d-none d-lg-flex align-items-center me-auto">
+                        <button class="btn control-btn-music me-2" onclick="history.back()" title="Go back">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="btn control-btn-music" onclick="history.forward()" title="Go forward">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <a class="navbar-brand d-flex align-items-center" asp-area="" asp-controller="Home" asp-action="Index">
+                        <i class="fas fa-music me-2" style="color: var(--music-primary);"></i>
+                        <span class="fw-bold" style="color: var(--music-text-primary);">MoodplaylistGenerator</span>
+                    </a>
+                }
+                
+                <div class="d-flex align-items-center ms-auto">
+                    <!-- Theme Toggle -->
+                    <button class="btn btn-outline-secondary me-3" id="themeToggle" title="Toggle Dark/Light Mode" style="border: 1px solid var(--music-border); color: var(--music-text-primary); background: transparent; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-sun" id="themeIcon"></i>
+                    </button>
+                    
+                    @if (User.Identity!.IsAuthenticated)
+                    {
+                        <!-- User Menu -->
+                        <div class="dropdown">
+                            <button class="btn d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: var(--music-bg-secondary); border: 1px solid var(--music-border); border-radius: 20px; padding: 6px 12px; color: var(--music-text-primary);">
+                                <div class="avatar-circle me-2" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span class="fw-medium">@User.Identity.Name</span>
+                                <i class="fas fa-chevron-down ms-2" style="font-size: 0.75rem;"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" style="background: var(--music-bg-primary); border: 1px solid var(--music-border); border-radius: var(--music-radius-lg); box-shadow: var(--music-shadow-hover); margin-top: 8px;">
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center" href="#" style="color: var(--music-text-primary); padding: 8px 16px;">
+                                        <i class="fas fa-user-circle me-3"></i>Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center" href="#" style="color: var(--music-text-primary); padding: 8px 16px;">
+                                        <i class="fas fa-cog me-3"></i>Settings
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider" style="border-color: var(--music-border); margin: 8px 0;"></li>
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                        <button type="submit" class="dropdown-item d-flex align-items-center" style="color: var(--music-accent); padding: 8px 16px; background: none; border: none; width: 100%; text-align: left;">
+                                            <i class="fas fa-sign-out-alt me-3"></i>Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex align-items-center gap-2">
+                            <a class="btn" asp-controller="Account" asp-action="Login" style="color: var(--music-text-primary); text-decoration: none;">
+                                <i class="fas fa-sign-in-alt me-1"></i>Login
+                            </a>
+                            <a class="btn play-btn-overlay" asp-controller="Account" asp-action="Register" style="padding: 8px 20px; font-size: 0.875rem; height: auto; width: auto; border-radius: 20px;">
+                                <i class="fas fa-user-plus me-1"></i>Get Started
+                            </a>
+                        </div>
+                    }
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            }
-            @if (TempData["ErrorMessage"] != null)
-            {
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            }
-            @if (TempData["Message"] != null)
-            {
-                <div class="alert alert-info alert-dismissible fade show" role="alert">
-                    <i class="fas fa-info-circle me-2"></i>@TempData["Message"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            }
-            @RenderBody()
-        </main>
+    
+    <!-- Main Content Area -->
+    <div class="d-flex" style="min-height: 100vh;">
+        @if (User.Identity!.IsAuthenticated)
+        {
+            <!-- Sidebar Backdrop for Mobile -->
+            <div class="sidebar-backdrop d-lg-none" id="sidebarBackdrop" onclick="closeMobileSidebar()" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5); z-index: 999; display: none;"></div>
+        
+            <!-- Main Content with Sidebar Offset -->
+            <div class="flex-grow-1" style="margin-left: 0; transition: margin-left 0.3s ease;" id="mainContent">
+                <main role="main" style="padding: 80px 24px @(User.Identity!.IsAuthenticated ? "90px" : "24px") 24px; min-height: calc(100vh - 72px);">
+                    @RenderBody()
+                </main>
+            </div>
+        }
+        else
+        {
+            <div class="flex-grow-1">
+                <main role="main" style="padding: 80px 24px 24px 24px;">
+                    @RenderBody()
+                </main>
+            </div>
+        }
     </div>
+    
+    @if (User.Identity!.IsAuthenticated)
+    {
+        <!-- Bottom Music Player -->
+        <div class="bottom-player" id="bottomPlayer" style="display: none;">
+            <!-- Left: Currently Playing Track -->
+            <div class="d-flex align-items-center" style="min-width: 0; width: 280px;">
+                <div class="album-art-container me-3">
+                    <div class="album-art-placeholder">
+                        <i class="fas fa-music" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+                <div class="track-info" style="min-width: 0;">
+                    <div class="track-title" id="currentTrackTitle">Select a song to play</div>
+                    <div class="track-artist" id="currentTrackArtist">No track selected</div>
+                </div>
+                <button class="control-btn-music ms-2" id="favoriteBtn" title="Add to favorites">
+                    <i class="far fa-heart"></i>
+                </button>
+            </div>
+            
+            <!-- Center: Player Controls -->
+            <div class="bottom-player-center">
+                <div class="bottom-player-controls">
+                    <button class="control-btn-music" id="shuffleBtn" title="Shuffle">
+                        <i class="fas fa-random"></i>
+                    </button>
+                    <button class="control-btn-music" id="prevBtn" title="Previous">
+                        <i class="fas fa-step-backward"></i>
+                    </button>
+                    <button class="play-pause-btn" id="playPauseBtn" title="Play">
+                        <i class="fas fa-play" id="playPauseIcon"></i>
+                    </button>
+                    <button class="control-btn-music" id="nextBtn" title="Next">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
+                    <button class="control-btn-music" id="repeatBtn" title="Repeat">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+                <div class="bottom-player-progress">
+                    <span id="currentTime">0:00</span>
+                    <div class="progress-bar-music flex-grow-1 mx-2" id="progressBar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                    </div>
+                    <span id="totalTime">0:00</span>
+                </div>
+            </div>
+            
+            <!-- Right: Volume and Additional Controls -->
+            <div class="bottom-player-right" style="min-width: 180px; justify-content: flex-end;">
+                <button class="control-btn-music" id="queueBtn" title="Queue">
+                    <i class="fas fa-list"></i>
+                </button>
+                <div class="volume-control">
+                    <button class="control-btn-music" id="volumeBtn" title="Volume">
+                        <i class="fas fa-volume-up" id="volumeIcon"></i>
+                    </button>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
+                </div>
+                <button class="control-btn-music" id="fullscreenBtn" title="Fullscreen">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    }
 
     <footer class="border-top footer text-muted">
         <div class="container">
             &copy; 2025 - MoodPlaylistGenerator - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Clean script loading order -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" 
+            integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" 
+            integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+    
+    <!-- Additional initialization script -->
+    <script>
+        // Immediate initialization after Bootstrap loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded - Bootstrap check:', typeof bootstrap);
+            
+            // Force dropdown initialization
+            setTimeout(() => {
+                const userDropdown = document.getElementById('userDropdown');
+                if (userDropdown && typeof bootstrap !== 'undefined') {
+                    try {
+                        new bootstrap.Dropdown(userDropdown);
+                        console.log('User dropdown initialized successfully');
+                    } catch (e) {
+                        console.warn('Bootstrap dropdown failed, using fallback:', e);
+                        
+                        // Manual dropdown fallback
+                        const dropdownMenu = userDropdown.nextElementSibling;
+                        userDropdown.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            dropdownMenu.classList.toggle('show');
+                        });
+                        
+                        document.addEventListener('click', function(event) {
+                            if (!userDropdown.contains(event.target)) {
+                                dropdownMenu.classList.remove('show');
+                            }
+                        });
+                    }
+                }
+                
+                // Force theme toggle functionality
+                const themeToggle = document.getElementById('themeToggle');
+                const themeIcon = document.getElementById('themeIcon');
+                if (themeToggle && themeIcon) {
+                    console.log('Setting up theme toggle');
+                    
+                    // Clear any existing handlers
+                    themeToggle.onclick = null;
+                    themeToggle.removeAttribute('onclick');
+                    
+                    themeToggle.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const html = document.documentElement;
+                        const currentTheme = html.getAttribute('data-bs-theme') || 'dark';
+                        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                        
+                        console.log('Theme toggle: switching from', currentTheme, 'to', newTheme);
+                        
+                        html.setAttribute('data-bs-theme', newTheme);
+                        localStorage.setItem('theme', newTheme);
+                        
+                        if (newTheme === 'dark') {
+                            themeIcon.className = 'fas fa-sun';
+                            themeToggle.title = 'Switch to Light Mode';
+                        } else {
+                            themeIcon.className = 'fas fa-moon';
+                            themeToggle.title = 'Switch to Dark Mode';
+                        }
+                        
+                        console.log('Theme switched successfully to:', newTheme);
+                    });
+                    
+                    console.log('Theme toggle setup complete');
+                }
+            }, 200);
+        });
+    </script>
+    
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -1,0 +1,148 @@
+@model MoodPlaylistGenerator.ViewModels.PlaylistDetailsViewModel
+@{
+    ViewData["Title"] = Model.Playlist.Name;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>
+            <i class="fas fa-list-music me-2"></i>@Model.Playlist.Name
+            <span class="badge bg-@(Model.Playlist.Mood.Name.ToLower() == "happy" ? "warning" : 
+                                   Model.Playlist.Mood.Name.ToLower() == "sad" ? "secondary" : 
+                                   Model.Playlist.Mood.Name.ToLower() == "energetic" ? "danger" : 
+                                   Model.Playlist.Mood.Name.ToLower() == "calm" ? "info" : 
+                                   Model.Playlist.Mood.Name.ToLower() == "romantic" ? "danger" : "primary") ms-2">
+                @Model.Playlist.Mood.Name
+            </span>
+        </h2>
+        @if (!string.IsNullOrEmpty(Model.Playlist.Description))
+        {
+            <p class="text-muted">@Model.Playlist.Description</p>
+        }
+        <p class="small text-muted">
+            <i class="fas fa-calendar me-1"></i>Created @Model.Playlist.CreatedAt.ToString("MMMM d, yyyy")
+            | <i class="fas fa-music me-1"></i>@Model.Playlist.PlaylistSongs.Count songs
+        </p>
+    </div>
+    <div>
+        <a asp-action="Edit" asp-route-id="@Model.Playlist.Id" class="btn btn-outline-primary me-2">
+            <i class="fas fa-edit me-1"></i>Edit
+        </a>
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+    </div>
+</div>
+
+<!-- Add Song Section -->
+@if (Model.AvailableSongs.Any())
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-plus me-2"></i>Add Songs
+            </h5>
+        </div>
+        <div class="card-body">
+            <form asp-action="AddSong" method="post" class="row align-items-end">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="playlistId" value="@Model.Playlist.Id" />
+                
+                <div class="col-md-8">
+                    <label for="songId" class="form-label">Select a song to add:</label>
+                    <select name="songId" class="form-select">
+                        <option value="">-- Choose a song --</option>
+                        @foreach (var song in Model.AvailableSongs.Where(s => !Model.Playlist.PlaylistSongs.Any(ps => ps.SongId == s.Id)))
+                        {
+                            <option value="@song.Id">@song.Artist - @song.Title</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Song
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- Playlist Songs -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-music me-2"></i>Songs (@Model.Playlist.PlaylistSongs.Count)
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (Model.Playlist.PlaylistSongs.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="50">#</th>
+                            <th>Song</th>
+                            <th>Artist</th>
+                            <th width="100">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var playlistSong in Model.Playlist.PlaylistSongs.OrderBy(ps => ps.Order))
+                        {
+                            <tr>
+                                <td>@playlistSong.Order</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        @if (!string.IsNullOrEmpty(playlistSong.Song.YouTubeUrl))
+                                        {
+                                            <i class="fab fa-youtube text-danger me-2"></i>
+                                        }
+                                        <div>
+                                            <strong>@playlistSong.Song.Title</strong>
+                                            @if (!string.IsNullOrEmpty(playlistSong.Song.Album))
+                                            {
+                                                <br><small class="text-muted">@playlistSong.Song.Album</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@playlistSong.Song.Artist</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-controller="Song" asp-action="Details" asp-route-id="@playlistSong.Song.Id" class="btn btn-outline-primary btn-sm" title="View Song">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <form asp-action="RemoveSong" method="post" style="display: inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="playlistId" value="@Model.Playlist.Id" />
+                                            <input type="hidden" name="songId" value="@playlistSong.Song.Id" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Remove from Playlist" onclick="return confirm('Remove this song from the playlist?')">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="fas fa-music fa-3x text-muted mb-3"></i>
+                <h5>No songs in this playlist yet</h5>
+                <p class="text-muted">Add some songs to get started!</p>
+                @if (!Model.AvailableSongs.Any())
+                {
+                    <a asp-controller="Song" asp-action="Create" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Create Your First Song
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>

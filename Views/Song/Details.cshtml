@@ -1,0 +1,220 @@
+@model MoodPlaylistGenerator.ViewModels.SongDetailsViewModel
+@{
+    ViewData["Title"] = Model.Song.Title;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>
+            <i class="fas fa-compact-disc me-2"></i>@Model.Song.Title
+            @if (!string.IsNullOrEmpty(Model.Song.YouTubeUrl))
+            {
+                <i class="fab fa-youtube text-danger ms-2"></i>
+            }
+        </h2>
+        <p class="text-muted h5">by @Model.Song.Artist</p>
+        @if (!string.IsNullOrEmpty(Model.Song.Album))
+        {
+            <p class="text-muted">Album: @Model.Song.Album</p>
+        }
+        @if (Model.Song.Year.HasValue)
+        {
+            <p class="text-muted">Year: @Model.Song.Year</p>
+        }
+    </div>
+    <div>
+        <a asp-action="Edit" asp-route-id="@Model.Song.Id" class="btn btn-outline-primary me-2">
+            <i class="fas fa-edit me-1"></i>Edit
+        </a>
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Song Info and Player -->
+    <div class="@(Model.YouTubeEmbedUrl != null ? "col-lg-8" : "col-12")">
+        @if (Model.YouTubeEmbedUrl != null)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fab fa-youtube text-danger me-2"></i>Listen on YouTube
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="ratio ratio-16x9">
+                        <iframe src="@Model.YouTubeEmbedUrl" 
+                                title="YouTube video player" 
+                                frameborder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Song Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Song Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Title:</strong> @Model.Song.Title</p>
+                        <p><strong>Artist:</strong> @Model.Song.Artist</p>
+                        @if (!string.IsNullOrEmpty(Model.Song.Album))
+                        {
+                            <p><strong>Album:</strong> @Model.Song.Album</p>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        @if (Model.Song.Year.HasValue)
+                        {
+                            <p><strong>Year:</strong> @Model.Song.Year</p>
+                        }
+                        <p><strong>Added:</strong> @Model.Song.CreatedAt.ToString("MMMM d, yyyy")</p>
+                        @if (!string.IsNullOrEmpty(Model.Song.YouTubeUrl))
+                        {
+                            <p>
+                                <strong>YouTube URL:</strong> 
+                                <a href="@Model.Song.YouTubeUrl" target="_blank" class="text-decoration-none">
+                                    <i class="fab fa-youtube text-danger me-1"></i>View on YouTube
+                                    <i class="fas fa-external-link-alt ms-1"></i>
+                                </a>
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="@(Model.YouTubeEmbedUrl != null ? "col-lg-4" : "col-12")">
+        <!-- Moods -->
+        @if (Model.Song.SongMoods.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-palette me-2"></i>Moods
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @foreach (var songMood in Model.Song.SongMoods)
+                    {
+                        <span class="badge bg-@(songMood.Mood.Name.ToLower() == "happy" ? "warning" : 
+                                              songMood.Mood.Name.ToLower() == "sad" ? "secondary" : 
+                                              songMood.Mood.Name.ToLower() == "energetic" ? "danger" : 
+                                              songMood.Mood.Name.ToLower() == "calm" ? "info" : 
+                                              songMood.Mood.Name.ToLower() == "romantic" ? "danger" : "primary") me-1 mb-1">
+                            @songMood.Mood.Name
+                        </span>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Add to Playlist -->
+        @if (Model.UserPlaylists.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-plus me-2"></i>Add to Playlist
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form asp-controller="Playlist" asp-action="AddSong" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="songId" value="@Model.Song.Id" />
+                        
+                        <div class="mb-3">
+                            <select name="playlistId" class="form-select form-select-sm">
+                                <option value="">-- Select Playlist --</option>
+                                @foreach (var playlist in Model.UserPlaylists)
+                                {
+                                    <option value="@playlist.Id">@playlist.Name (@playlist.Mood.Name)</option>
+                                }
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fas fa-plus me-1"></i>Add Song
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <i class="fas fa-list-music fa-2x text-muted mb-2"></i>
+                    <p class="text-muted">No playlists yet</p>
+                    <a asp-controller="Playlist" asp-action="Create" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i>Create Playlist
+                    </a>
+                </div>
+            </div>
+        }
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a asp-action="Edit" asp-route-id="@Model.Song.Id" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-edit me-1"></i>Edit Song
+                    </a>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete(@Model.Song.Id, '@Model.Song.Title', '@Model.Song.Artist')">
+                        <i class="fas fa-trash me-1"></i>Delete Song
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete "<span id="songTitle"></span>" by <span id="songArtist"></span>?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(songId, songTitle, songArtist) {
+            document.getElementById('songTitle').textContent = songTitle;
+            document.getElementById('songArtist').textContent = songArtist;
+            document.getElementById('deleteForm').action = '/Song/Delete/' + songId;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+    </script>
+}

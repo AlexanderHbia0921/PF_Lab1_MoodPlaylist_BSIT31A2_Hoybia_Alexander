@@ -1,0 +1,167 @@
+@model MoodPlaylistGenerator.ViewModels.SongListViewModel
+@{
+    ViewData["Title"] = "My Songs";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-compact-disc me-2"></i>My Songs</h2>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>Add Song
+    </a>
+</div>
+
+<!-- Search and Filter -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form asp-action="Index" method="get" class="d-flex">
+            <input type="text" name="searchTerm" value="@Model.SearchTerm" class="form-control me-2" placeholder="Search songs...">
+            <input type="hidden" name="filterByMood" value="@Model.FilterByMood">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <form asp-action="Index" method="get">
+            <div class="input-group">
+                <select name="filterByMood" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Moods</option>
+                    @foreach (var mood in Model.Moods)
+                    {
+                        <option value="@mood.Id" selected="@(Model.FilterByMood == mood.Id)">@mood.Name</option>
+                    }
+                </select>
+                <input type="hidden" name="searchTerm" value="@Model.SearchTerm">
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.Songs.Any())
+{
+    <div class="row">
+        @foreach (var song in Model.Songs)
+        {
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 song-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 text-truncate">@song.Title</h6>
+                        @if (!string.IsNullOrEmpty(song.YouTubeUrl))
+                        {
+                            <i class="fab fa-youtube text-danger"></i>
+                        }
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <strong>Artist:</strong> @song.Artist
+                            @if (!string.IsNullOrEmpty(song.Album))
+                            {
+                                <br><strong>Album:</strong> @song.Album
+                            }
+                            @if (song.Year.HasValue)
+                            {
+                                <br><strong>Year:</strong> @song.Year
+                            }
+                        </p>
+                        @if (song.SongMoods.Any())
+                        {
+                            <div class="mb-2">
+                                @foreach (var songMood in song.SongMoods.Take(3))
+                                {
+                                    <span class="badge bg-@(songMood.Mood.Name.ToLower() == "happy" ? "warning" : 
+                                                          songMood.Mood.Name.ToLower() == "sad" ? "secondary" : 
+                                                          songMood.Mood.Name.ToLower() == "energetic" ? "danger" : 
+                                                          songMood.Mood.Name.ToLower() == "calm" ? "info" : 
+                                                          songMood.Mood.Name.ToLower() == "romantic" ? "danger" : "primary") me-1">
+                                        @songMood.Mood.Name
+                                    </span>
+                                }
+                                @if (song.SongMoods.Count > 3)
+                                {
+                                    <span class="text-muted">+@(song.SongMoods.Count - 3) more</span>
+                                }
+                            </div>
+                        }
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>Added @song.CreatedAt.ToString("MMM d, yyyy")
+                            </small>
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="btn-group w-100" role="group">
+                            <a asp-action="Details" asp-route-id="@song.Id" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>View
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@song.Id" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </a>
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete(@song.Id, '@song.Title', '@song.Artist')">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <div class="empty-state">
+            <i class="fas fa-compact-disc fa-3x text-muted mb-3"></i>
+            <h4>No songs found</h4>
+            <p class="text-muted">
+                @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.FilterByMood.HasValue)
+                {
+                    <text>No songs match your current filters.</text>
+                    <br>
+                    <a asp-action="Index" class="btn btn-outline-primary mt-2">Clear Filters</a>
+                }
+                else
+                {
+                    <text>Add your first song to get started!</text>
+                    <br>
+                    <a asp-action="Create" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus me-1"></i>Add Song
+                    </a>
+                }
+            </p>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete "<span id="songTitle"></span>" by <span id="songArtist"></span>?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(songId, songTitle, songArtist) {
+            document.getElementById('songTitle').textContent = songTitle;
+            document.getElementById('songArtist').textContent = songArtist;
+            document.getElementById('deleteForm').action = '/Song/Delete/' + songId;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+    </script>
+}

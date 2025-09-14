@@ -1,0 +1,118 @@
+@model MoodPlaylistGenerator.ViewModels.CreateSongViewModel
+@{
+    ViewData["Title"] = "Add Song";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>Add New Song
+                </h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Title" class="form-label">Song Title *</label>
+                                <input asp-for="Title" class="form-control" placeholder="Enter song title">
+                                <span asp-validation-for="Title" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Artist" class="form-label">Artist *</label>
+                                <input asp-for="Artist" class="form-control" placeholder="Enter artist name">
+                                <span asp-validation-for="Artist" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Album" class="form-label">Album</label>
+                                <input asp-for="Album" class="form-control" placeholder="Enter album name (optional)">
+                                <span asp-validation-for="Album" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Year" class="form-label">Year</label>
+                                <input asp-for="Year" class="form-control" type="number" min="1900" max="2100" placeholder="Release year">
+                                <span asp-validation-for="Year" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="YouTubeUrl" class="form-label">YouTube URL</label>
+                        <input asp-for="YouTubeUrl" class="form-control" placeholder="https://www.youtube.com/watch?v=...">
+                        <span asp-validation-for="YouTubeUrl" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="fab fa-youtube text-danger me-1"></i>
+                            Optional: Add a YouTube link to this song for playback
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Moods *</label>
+                        <div class="form-text mb-2">Select one or more moods that describe this song:</div>
+                        <div class="row">
+                            @for (int i = 0; i < Model.AvailableMoods.Count; i++)
+                            {
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="SelectedMoodIds" value="@Model.AvailableMoods[i].Id" id="mood@Model.AvailableMoods[i].Id">
+                                        <label class="form-check-label" for="mood@Model.AvailableMoods[i].Id">
+                                            <strong>@Model.AvailableMoods[i].Name</strong>
+                                            <br><small class="text-muted">@Model.AvailableMoods[i].Description</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @Html.ValidationMessageFor(m => m.SelectedMoodIds, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-controller="Home" asp-action="Dashboard" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Add Song
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        // YouTube URL validation feedback
+        document.getElementById('YouTubeUrl').addEventListener('input', function() {
+            const url = this.value;
+            const feedback = document.getElementById('youtube-feedback');
+            
+            if (url && url.trim() !== '') {
+                if (url.includes('youtube.com/watch?v=') || url.includes('youtu.be/')) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } else {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            } else {
+                this.classList.remove('is-valid', 'is-invalid');
+            }
+        });
+    </script>
+}

@@ -1,0 +1,72 @@
+@model MoodPlaylistGenerator.ViewModels.EditPlaylistViewModel
+@{
+    ViewData["Title"] = "Edit Playlist";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>Edit Playlist
+                </h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                    
+                    <input asp-for="Id" type="hidden" />
+                    
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label">Playlist Name *</label>
+                        <input asp-for="Name" class="form-control" placeholder="Enter playlist name">
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="3" placeholder="Describe your playlist (optional)"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="MoodId" class="form-label">Mood *</label>
+                        <select asp-for="MoodId" class="form-select" asp-items="@(new SelectList(Model.AvailableMoods, "Id", "Name"))">
+                            <option value="">-- Select a Mood --</option>
+                        </select>
+                        <span asp-validation-for="MoodId" class="text-danger"></span>
+                        <div class="form-text">Choose the mood that best represents this playlist</div>
+                    </div>
+
+                    <!-- Mood Descriptions -->
+                    <div class="mb-4">
+                        <h6>Mood Guide:</h6>
+                        <div class="row">
+                            @foreach (var mood in Model.AvailableMoods)
+                            {
+                                <div class="col-md-6 mb-2">
+                                    <div class="p-2 border rounded">
+                                        <strong>@mood.Name:</strong> <small class="text-muted">@mood.Description</small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Playlist
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Update Playlist
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,222 @@
+@model MoodPlaylistGenerator.ViewModels.PlaylistListViewModel
+@{
+    ViewData["Title"] = "My Playlists";
+}
+
+<!-- Spotify-like Header -->
+<div class="music-list-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="music-list-title">Your Playlists</h1>
+            <p class="music-list-subtitle mb-0">@Model.Playlists.Count() playlists created by you</p>
+        </div>
+        <a asp-action="Create" class="play-btn-overlay" style="padding: 10px 20px; font-size: 0.875rem; height: auto; width: auto; border-radius: 20px; text-decoration: none;">
+            <i class="fas fa-plus me-2"></i>Create Playlist
+        </a>
+    </div>
+</div>
+
+<!-- Modern Search and Filter -->
+<div class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="search-container">
+                <form asp-action="Index" method="get" class="d-flex">
+                    <div class="modern-input flex-grow-1" style="margin-bottom: 0;">
+                        <input type="text" name="searchTerm" value="@Model.SearchTerm" class="search-input" placeholder=" " style="background: var(--music-bg-secondary); border: 1px solid var(--music-border); color: var(--music-text-primary); padding-right: 48px;">
+                        <label style="background: var(--music-bg-secondary); color: var(--music-text-secondary);">Search playlists...</label>
+                        <i class="search-icon fas fa-search"></i>
+                    </div>
+                    <input type="hidden" name="filterByMood" value="@Model.FilterByMood">
+                    <button type="submit" class="btn ms-2 control-btn-music">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterByMood = (int?)null })" class="genre-pill @(Model.FilterByMood == null ? "active" : "")">All Moods</a>
+                @foreach (var mood in Model.Moods)
+                {
+                    <a href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterByMood = mood.Id })" class="genre-pill @(Model.FilterByMood == mood.Id ? "active" : "")">@mood.Name</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Playlists.Any())
+{
+    <div class="row g-4">
+        @foreach (var playlist in Model.Playlists)
+        {
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                <div class="music-card" onclick="location.href='@Url.Action("Details", new { id = playlist.Id })'">
+                    <!-- Album Art Placeholder -->
+                    <div class="album-art-container mb-3">
+                        <div class="album-art-placeholder">
+                            @{
+                                var moodIcon = playlist.Mood.Name.ToLower() switch
+                                {
+                                    "happy" => "😊",
+                                    "sad" => "😢",
+                                    "energetic" => "⚡",
+                                    "calm" => "😌",
+                                    "romantic" => "💖",
+                                    "focus" => "🎯",
+                                    _ => "🎵"
+                                };
+                            }
+                            <span style="font-size: 2rem;">@moodIcon</span>
+                        </div>
+                        <div class="album-art-overlay">
+                            <button class="play-btn-overlay" onclick="event.stopPropagation(); playPlaylist(@playlist.Id)">
+                                <i class="fas fa-play"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Playlist Info -->
+                    <div>
+                        <h3 class="music-card-title" title="@playlist.Name">@playlist.Name</h3>
+                        <p class="music-card-subtitle" title="@playlist.PlaylistSongs.Count songs • @playlist.Mood.Name mood">
+                            @playlist.PlaylistSongs.Count songs • @playlist.Mood.Name
+                        </p>
+                        @if (!string.IsNullOrEmpty(playlist.Description))
+                        {
+                            <p class="music-card-subtitle mt-1" title="@playlist.Description" style="opacity: 0.8; font-size: 0.8rem; line-height: 1.3;">
+                                @(playlist.Description.Length > 60 ? playlist.Description.Substring(0, 60) + "..." : playlist.Description)
+                            </p>
+                        }
+                    </div>
+                    
+                    <!-- Hidden Action Menu -->
+                    <div class="position-absolute top-0 end-0 p-2" style="opacity: 0; transition: opacity 0.2s;">
+                        <div class="dropdown">
+                            <button class="control-btn-music" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation()">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </button>
+                            <ul class="dropdown-menu" style="background: var(--music-bg-primary); border: 1px solid var(--music-border); border-radius: var(--music-radius-lg);">
+                                <li><a class="dropdown-item" href="@Url.Action("Details", new { id = playlist.Id })" style="color: var(--music-text-primary);"><i class="fas fa-eye me-2"></i>View Details</a></li>
+                                <li><a class="dropdown-item" href="@Url.Action("Edit", new { id = playlist.Id })" style="color: var(--music-text-primary);"><i class="fas fa-edit me-2"></i>Edit Playlist</a></li>
+                                <li><hr class="dropdown-divider" style="border-color: var(--music-border);"></li>
+                                <li><button class="dropdown-item" onclick="confirmDelete(@playlist.Id, '@playlist.Name')" style="color: var(--music-accent);"><i class="fas fa-trash me-2"></i>Delete</button></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <div class="empty-state">
+            <i class="fas fa-list-music fa-3x text-muted mb-3"></i>
+            <h4>No playlists found</h4>
+            <p class="text-muted">
+                @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.FilterByMood.HasValue)
+                {
+                    <text>No playlists match your current filters.</text>
+                    <br>
+                    <a asp-action="Index" class="btn btn-outline-primary mt-2">Clear Filters</a>
+                }
+                else
+                {
+                    <text>Create your first playlist to get started!</text>
+                    <br>
+                    <a asp-action="Create" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus me-1"></i>Create Playlist
+                    </a>
+                }
+            </p>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the playlist "<span id="playlistName"></span>"?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(playlistId, playlistName) {
+            document.getElementById('playlistName').textContent = playlistName;
+            document.getElementById('deleteForm').action = '/Playlist/Delete/' + playlistId;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+        
+        function playPlaylist(playlistId) {
+            // Show loading toast
+            if (window.showToast) {
+                window.showToast('Loading playlist...', 'info');
+            }
+            
+            // Simulate starting playlist playback
+            setTimeout(() => {
+                if (window.musicPlayer) {
+                    // Get playlist info from the card
+                    const playlistCard = event.target.closest('.music-card');
+                    const playlistTitle = playlistCard.querySelector('.music-card-title').textContent;
+                    const playlistSubtitle = playlistCard.querySelector('.music-card-subtitle').textContent;
+                    
+                    window.musicPlayer.play({
+                        title: playlistTitle,
+                        artist: playlistSubtitle,
+                        duration: 240 // 4 minutes default for playlists
+                    });
+                    
+                    if (window.showToast) {
+                        window.showToast(`Now playing: ${playlistTitle}`, 'success');
+                    }
+                } else {
+                    if (window.showToast) {
+                        window.showToast('Music player not available', 'warning');
+                    }
+                }
+            }, 500);
+        }
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + K for search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                const searchInput = document.querySelector('input[name="searchTerm"]');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }
+            
+            // Space to play/pause (when not typing)
+            if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                const playPauseBtn = document.getElementById('playPauseBtn');
+                if (playPauseBtn) {
+                    playPauseBtn.click();
+                }
+            }
+        });
+    </script>
+}

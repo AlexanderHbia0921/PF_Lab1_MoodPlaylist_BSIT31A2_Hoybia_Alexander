@@ -23,6 +23,18 @@ namespace MoodPlaylistGenerator.Data.Entities
         [StringLength(500)]
         public string? YouTubeUrl { get; set; }
         
+        // Local media file properties
+        [StringLength(500)]
+        public string? LocalFilePath { get; set; }
+        
+        [StringLength(50)]
+        public string? FileType { get; set; } // "audio" or "video"
+        
+        [StringLength(20)]
+        public string? MimeType { get; set; }
+        
+        public long? FileSize { get; set; } // File size in bytes
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         // Foreign key

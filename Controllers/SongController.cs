@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MoodPlaylistGenerator.Services.Implementations;
 using MoodPlaylistGenerator.ViewModels;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Hosting;
 
 namespace MoodPlaylistGenerator.Controllers
 {
@@ -12,12 +13,14 @@ namespace MoodPlaylistGenerator.Controllers
         private readonly SongService _songService;
         private readonly MoodService _moodService;
         private readonly PlaylistService _playlistService;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public SongController(SongService songService, MoodService moodService, PlaylistService playlistService)
+        public SongController(SongService songService, MoodService moodService, PlaylistService playlistService, IWebHostEnvironment webHostEnvironment)
         {
             _songService = songService;
             _moodService = moodService;
             _playlistService = playlistService;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         private int GetCurrentUserId()
@@ -79,7 +82,10 @@ namespace MoodPlaylistGenerator.Controllers
             {
                 Song = song,
                 UserPlaylists = userPlaylists,
-                YouTubeEmbedUrl = youTubeEmbedUrl
+                YouTubeEmbedUrl = youTubeEmbedUrl,
+                MediaUrl = _songService.GetMediaUrl(song),
+                MediaType = _songService.GetMediaType(song),
+                HasLocalMedia = _songService.HasLocalMedia(song)
             };
 
             return View(viewModel);
@@ -103,6 +109,7 @@ namespace MoodPlaylistGenerator.Controllers
         {
             if (ModelState.IsValid)
             {
+                // Validate YouTube URL if provided
                 if (!string.IsNullOrWhiteSpace(model.YouTubeUrl))
                 {
                     var isValidUrl = await _songService.IsValidYouTubeUrl(model.YouTubeUrl);
@@ -112,13 +119,29 @@ namespace MoodPlaylistGenerator.Controllers
                     }
                 }
 
+                // Validate media file if provided
+                if (model.MediaFile != null)
+                {
+                    if (!_songService.IsValidMediaFile(model.MediaFile))
+                    {
+                        ModelState.AddModelError(nameof(model.MediaFile), "Invalid media file. Supported formats: MP3, WAV, OGG, M4A, AAC, MP4, AVI, MOV, WMV, WEBM. Max size: 100MB.");
+                    }
+                }
+
                 if (ModelState.IsValid)
                 {
-                    var userId = GetCurrentUserId();
-                    var song = await _songService.CreateSongAsync(model.Title, model.Artist, model.Album, model.Year, model.YouTubeUrl, userId, model.SelectedMoodIds);
-                    
-                    TempData["Success"] = "Song created successfully!";
-                    return RedirectToAction(nameof(Details), new { id = song.Id });
+                    try
+                    {
+                        var userId = GetCurrentUserId();
+                        var song = await _songService.CreateSongAsync(model.Title, model.Artist, model.Album, model.Year, model.YouTubeUrl, userId, model.SelectedMoodIds, model.MediaFile, _webHostEnvironment.WebRootPath);
+                        
+                        TempData["Success"] = "Song created successfully!";
+                        return RedirectToAction(nameof(Details), new { id = song.Id });
+                    }
+                    catch (Exception ex)
+                    {
+                        ModelState.AddModelError("", $"Error creating song: {ex.Message}");
+                    }
                 }
             }
 
@@ -158,6 +181,7 @@ namespace MoodPlaylistGenerator.Controllers
         {
             if (ModelState.IsValid)
             {
+                // Validate YouTube URL if provided
                 if (!string.IsNullOrWhiteSpace(model.YouTubeUrl))
                 {
                     var isValidUrl = await _songService.IsValidYouTubeUrl(model.YouTubeUrl);
@@ -167,18 +191,34 @@ namespace MoodPlaylistGenerator.Controllers
                     }
                 }
 
+                // Validate media file if provided
+                if (model.MediaFile != null)
+                {
+                    if (!_songService.IsValidMediaFile(model.MediaFile))
+                    {
+                        ModelState.AddModelError(nameof(model.MediaFile), "Invalid media file. Supported formats: MP3, WAV, OGG, M4A, AAC, MP4, AVI, MOV, WMV, WEBM. Max size: 100MB.");
+                    }
+                }
+
                 if (ModelState.IsValid)
                 {
-                    var userId = GetCurrentUserId();
-                    var success = await _songService.UpdateSongAsync(model.Id, userId, model.Title, model.Artist, model.Album, model.Year, model.YouTubeUrl, model.SelectedMoodIds);
-
-                    if (success)
+                    try
                     {
-                        TempData["Success"] = "Song updated successfully!";
-                        return RedirectToAction(nameof(Details), new { id = model.Id });
-                    }
+                        var userId = GetCurrentUserId();
+                        var success = await _songService.UpdateSongAsync(model.Id, userId, model.Title, model.Artist, model.Album, model.Year, model.YouTubeUrl, model.SelectedMoodIds, model.MediaFile, _webHostEnvironment.WebRootPath);
 
-                    ModelState.AddModelError("", "Failed to update song.");
+                        if (success)
+                        {
+                            TempData["Success"] = "Song updated successfully!";
+                            return RedirectToAction(nameof(Details), new { id = model.Id });
+                        }
+
+                        ModelState.AddModelError("", "Failed to update song.");
+                    }
+                    catch (Exception ex)
+                    {
+                        ModelState.AddModelError("", $"Error updating song: {ex.Message}");
+                    }
                 }
             }
 

@@ -34,8 +34,42 @@
 
 <div class="row">
     <!-- Song Info and Player -->
-    <div class="@(Model.YouTubeEmbedUrl != null ? "col-lg-8" : "col-12")">
-        @if (Model.YouTubeEmbedUrl != null)
+    <div class="@(Model.HasLocalMedia || Model.YouTubeEmbedUrl != null ? "col-lg-8" : "col-12")">
+        @if (Model.HasLocalMedia && Model.MediaType == "audio")
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-volume-up text-primary me-2"></i>Audio Player
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <audio controls class="w-100" preload="metadata">
+                        <source src="@Model.MediaUrl" type="@Model.Song.MimeType">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+            </div>
+        }
+        else if (Model.HasLocalMedia && Model.MediaType == "video")
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-play text-primary me-2"></i>Video Player
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="ratio ratio-16x9">
+                        <video controls preload="metadata">
+                            <source src="@Model.MediaUrl" type="@Model.Song.MimeType">
+                            Your browser does not support the video element.
+                        </video>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (Model.YouTubeEmbedUrl != null)
         {
             <div class="card mb-4">
                 <div class="card-header">
@@ -47,6 +81,27 @@
                     <div class="ratio ratio-16x9">
                         <iframe src="@Model.YouTubeEmbedUrl" 
                                 title="YouTube video player" 
+                                frameborder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Rick Roll fallback - No notification, just embed -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-music text-info me-2"></i>Music Player
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="ratio ratio-16x9">
+                        <iframe src="@Model.MediaUrl" 
+                                title="Music player" 
                                 frameborder="0" 
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                                 allowfullscreen>
@@ -96,7 +151,7 @@
     </div>
 
     <!-- Sidebar -->
-    <div class="@(Model.YouTubeEmbedUrl != null ? "col-lg-4" : "col-12")">
+    <div class="@(Model.HasLocalMedia || Model.YouTubeEmbedUrl != null ? "col-lg-4" : "col-12")">
         <!-- Moods -->
         @if (Model.Song.SongMoods.Any())
         {

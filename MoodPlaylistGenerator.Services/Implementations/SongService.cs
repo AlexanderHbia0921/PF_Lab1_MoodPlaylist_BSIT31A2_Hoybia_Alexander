@@ -1,12 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using MoodPlaylistGenerator.Data;
 using MoodPlaylistGenerator.Data.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace MoodPlaylistGenerator.Services.Implementations
 {
     public class SongService
     {
         private readonly ApplicationDbContext _context;
+        private const string RickRollVideoId = "dQw4w9WgXcQ"; // Rick Roll video ID
+        private readonly string[] AllowedAudioExtensions = {".mp3", ".wav", ".ogg", ".m4a", ".aac"};
+        private readonly string[] AllowedVideoExtensions = {".mp4", ".avi", ".mov", ".wmv", ".webm"};
+        private const long MaxFileSize = 100 * 1024 * 1024; // 100MB
 
         public SongService(ApplicationDbContext context)
         {
@@ -56,13 +61,29 @@ namespace MoodPlaylistGenerator.Services.Implementations
 
         public async Task<Song> CreateSongAsync(
             string title, string artist, string? album,
-            int? year, string? youTubeUrl, int userId, List<int> moodIds)
+            int? year, string? youTubeUrl, int userId, List<int> moodIds,
+            IFormFile? mediaFile = null, string? uploadsPath = null)
         {
             // Validate that the User exists
             var userExists = await _context.Users.AnyAsync(u => u.Id == userId);
             if (!userExists)
             {
                 throw new ArgumentException($"User with ID {userId} does not exist.", nameof(userId));
+            }
+
+            // Handle file upload if provided
+            string? localFilePath = null;
+            string? fileType = null;
+            string? mimeType = null;
+            long? fileSize = null;
+
+            if (mediaFile != null && mediaFile.Length > 0 && !string.IsNullOrEmpty(uploadsPath))
+            {
+                var uploadResult = await SaveMediaFileAsync(mediaFile, uploadsPath);
+                localFilePath = uploadResult.FilePath;
+                fileType = uploadResult.FileType;
+                mimeType = uploadResult.MimeType;
+                fileSize = uploadResult.FileSize;
             }
 
             var song = new Song
@@ -72,6 +93,10 @@ namespace MoodPlaylistGenerator.Services.Implementations
                 Album = album,
                 Year = year,
                 YouTubeUrl = youTubeUrl,
+                LocalFilePath = localFilePath,
+                FileType = fileType,
+                MimeType = mimeType,
+                FileSize = fileSize,
                 UserId = userId,
                 CreatedAt = DateTime.UtcNow
             };
@@ -107,7 +132,8 @@ namespace MoodPlaylistGenerator.Services.Implementations
 
         public async Task<bool> UpdateSongAsync(
             int songId, int userId, string title, string artist,
-            string? album, int? year, string? youTubeUrl, List<int> moodIds)
+            string? album, int? year, string? youTubeUrl, List<int> moodIds,
+            IFormFile? mediaFile = null, string? uploadsPath = null)
         {
             var song = await _context.Songs
                 .Include(s => s.SongMoods)
@@ -115,6 +141,23 @@ namespace MoodPlaylistGenerator.Services.Implementations
 
             if (song == null)
                 return false;
+
+            // Handle file upload if provided
+            if (mediaFile != null && mediaFile.Length > 0 && !string.IsNullOrEmpty(uploadsPath))
+            {
+                // Delete old file if exists
+                if (!string.IsNullOrEmpty(song.LocalFilePath))
+                {
+                    await DeleteMediaFileAsync(song.LocalFilePath, uploadsPath);
+                }
+
+                // Save new file
+                var uploadResult = await SaveMediaFileAsync(mediaFile, uploadsPath);
+                song.LocalFilePath = uploadResult.FilePath;
+                song.FileType = uploadResult.FileType;
+                song.MimeType = uploadResult.MimeType;
+                song.FileSize = uploadResult.FileSize;
+            }
 
             // Update properties
             song.Title = title;
@@ -211,6 +254,104 @@ namespace MoodPlaylistGenerator.Services.Implementations
             {
                 return Task.FromResult(false);
             }
+        }
+
+        // File upload helper methods
+        public async Task<(string FilePath, string FileType, string MimeType, long FileSize)> SaveMediaFileAsync(IFormFile file, string webRootPath)
+        {
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("File is empty or null.");
+
+            if (file.Length > MaxFileSize)
+                throw new ArgumentException($"File size exceeds maximum allowed size of {MaxFileSize / (1024 * 1024)}MB.");
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var isAudio = AllowedAudioExtensions.Contains(extension);
+            var isVideo = AllowedVideoExtensions.Contains(extension);
+
+            if (!isAudio && !isVideo)
+                throw new ArgumentException("File type not supported. Allowed audio: " + string.Join(", ", AllowedAudioExtensions) + ". Allowed video: " + string.Join(", ", AllowedVideoExtensions));
+
+            var fileType = isAudio ? "audio" : "video";
+            var uploadsPath = Path.Combine(webRootPath, "uploads", fileType);
+            
+            // Ensure directory exists
+            Directory.CreateDirectory(uploadsPath);
+
+            // Generate unique filename
+            var uniqueFileName = Guid.NewGuid().ToString() + extension;
+            var filePath = Path.Combine(uploadsPath, uniqueFileName);
+            var relativePath = Path.Combine("uploads", fileType, uniqueFileName).Replace("\\", "/");
+
+            // Save file
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(fileStream);
+            }
+
+            return (relativePath, fileType, file.ContentType, file.Length);
+        }
+
+        public async Task DeleteMediaFileAsync(string relativePath, string webRootPath)
+        {
+            if (string.IsNullOrEmpty(relativePath))
+                return;
+
+            var fullPath = Path.Combine(webRootPath, relativePath.Replace("/", "\\"));
+            
+            if (File.Exists(fullPath))
+            {
+                try
+                {
+                    File.Delete(fullPath);
+                    await Task.CompletedTask; // Make it async compatible
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to delete file {fullPath}: {ex.Message}");
+                }
+            }
+        }
+
+        public bool IsValidMediaFile(IFormFile file)
+        {
+            if (file == null || file.Length == 0 || file.Length > MaxFileSize)
+                return false;
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            return AllowedAudioExtensions.Contains(extension) || AllowedVideoExtensions.Contains(extension);
+        }
+
+        public string GetMediaUrl(Song song)
+        {
+            // Priority: Local file > YouTube > Rick Roll fallback
+            if (!string.IsNullOrEmpty(song.LocalFilePath))
+            {
+                return $"/{song.LocalFilePath}";
+            }
+            
+            if (!string.IsNullOrEmpty(song.YouTubeUrl))
+            {
+                return song.YouTubeUrl;
+            }
+
+            // Rick Roll fallback - return YouTube embed URL
+            return $"https://www.youtube.com/embed/{RickRollVideoId}";
+        }
+
+        public string GetMediaType(Song song)
+        {
+            if (!string.IsNullOrEmpty(song.LocalFilePath))
+            {
+                return song.FileType ?? "audio"; // Default to audio if type is unknown
+            }
+            
+            return "youtube"; // YouTube or Rick Roll fallback
+        }
+
+        public bool HasLocalMedia(Song song)
+        {
+            return !string.IsNullOrEmpty(song.LocalFilePath);
         }
     }
 }

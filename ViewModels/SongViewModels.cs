@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using MoodPlaylistGenerator.Data.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace MoodPlaylistGenerator.ViewModels
 {
@@ -23,6 +24,9 @@ namespace MoodPlaylistGenerator.ViewModels
         [StringLength(500)]
         [Display(Name = "YouTube URL")]
         public string? YouTubeUrl { get; set; }
+
+        [Display(Name = "Media File")]
+        public IFormFile? MediaFile { get; set; }
 
         [Required]
         [Display(Name = "Moods")]
@@ -54,6 +58,9 @@ namespace MoodPlaylistGenerator.ViewModels
         [Display(Name = "YouTube URL")]
         public string? YouTubeUrl { get; set; }
 
+        [Display(Name = "Media File")]
+        public IFormFile? MediaFile { get; set; }
+
         [Required]
         [Display(Name = "Moods")]
         public List<int> SelectedMoodIds { get; set; } = new();
@@ -75,6 +82,9 @@ namespace MoodPlaylistGenerator.ViewModels
         public Song Song { get; set; } = null!;
         public List<Playlist> UserPlaylists { get; set; } = new();
         public string? YouTubeEmbedUrl { get; set; }
+        public string MediaUrl { get; set; } = string.Empty;
+        public string MediaType { get; set; } = string.Empty; // "audio", "video", or "youtube"
+        public bool HasLocalMedia { get; set; }
     }
 
     public class SongDetailViewModel

@@ -12,7 +12,7 @@
                 </h4>
             </div>
             <div class="card-body">
-                <form asp-action="Create" method="post">
+                <form asp-action="Create" method="post" enctype="multipart/form-data">
                     <div asp-validation-summary="All" class="text-danger mb-3"></div>
                     
                     <div class="row">
@@ -56,6 +56,17 @@
                         <div class="form-text">
                             <i class="fab fa-youtube text-danger me-1"></i>
                             Optional: Add a YouTube link to this song for playback
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="MediaFile" class="form-label">Upload Media File</label>
+                        <input asp-for="MediaFile" class="form-control" type="file" accept=".mp3,.wav,.ogg,.m4a,.aac,.mp4,.avi,.mov,.wmv,.webm">
+                        <span asp-validation-for="MediaFile" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="fas fa-upload text-primary me-1"></i>
+                            Optional: Upload an audio or video file (MP3, WAV, OGG, M4A, AAC, MP4, AVI, MOV, WMV, WEBM). Max size: 100MB.
+                            <br><small class="text-muted">Local files take priority over YouTube URLs for playback.</small>
                         </div>
                     </div>
 
